@@ -1,12 +1,12 @@
-import tensorflow as tf
-import numpy as np
-import matplotlib.pyplot as plt
 import time
 import os
 import math
 
+import tensorflow as tf
+import numpy as np
+import matplotlib.pyplot as plt
 
-#从tf.record文件中读取数据
+# Read the training data from the file of tf.record
 def read_example(filename, batch_size):
     reader = tf.TFRecordReader()
 
@@ -21,18 +21,18 @@ def read_example(filename, batch_size):
     parsed_example = tf.parse_example(batch, features={'image': tf.FixedLenFeature([], tf.string),
                                                        'label': tf.FixedLenFeature([], tf.int64)})
     image_raw = tf.decode_raw(parsed_example['image'], tf.uint8)
-    #IMAGE_HEIGHT为288，IMAGE_WIDTH为384, IMAGE_DEPTH为1
+    # IMAGE_HEIGHT equals to 288，IMAGE_WIDTH equals to 384, IMAGE_DEPTH equals to 1
     image = tf.cast(tf.reshape(image_raw, [batch_size, 288, 384, 1]), tf.float32)
     image = image/255.0
     #label_raw = tf.decode_raw(parsed_example['label'], tf.int8)
     label_raw = tf.cast(parsed_example['label'], tf.int32)
-    #将lable转换成one-hot形式
+    # Convert lable to one-hot form
     label = tf.reshape(label_raw, [batch_size*1])
     label = tf.one_hot(label, depth=num_classes)
     return image, label
 
 #-----------------------------------------------------------------------------------------------------------------------
-#定义构建VGG的网络参数
+# Define the parameters for VGG net
 def lrelu(input):
     return tf.nn.leaky_relu(input, name='leaky_relu')
 
@@ -70,7 +70,7 @@ def conv_layer(input, kernel_size, out_channels, strides, name, batch_normalize,
                             dtype=tf.float32, initializer=tf.constant_initializer(0.0), trainable=training)
         x = tf.nn.conv2d(input, w, strides, padding="SAME", name="conv")
         x = tf.nn.bias_add(x, b, name="bias_add")
-        #如果有BN层，则BN层应放在tf.layers.conv2d和activation之间
+        # If there is a BN layer, the BN layer should be placed between tf.layers.conv2d and activation
         if batch_normalize:
             y = batch_normalization(x, training)
             if activation:
@@ -98,7 +98,7 @@ def fc_layer(input, in_size, out_size, name, batch_normalize, activation, traini
 
         return fc
 #-----------------------------------------------------------------------------------------------------------------------
-#定义GoogLeNet的inception模块
+# define the inception module for the GoogLeNet
 def inception_module(input, filters_1, filters_2_reduce, filters_2, filters_3_reduce, filters_3, filters_4, name):
     with tf.variable_scope(name):
         conv_1 = conv_layer(input=input, kernel_size=(1, 1), out_channels=filters_1, strides=[1, 1, 1, 1],
@@ -120,7 +120,7 @@ def inception_module(input, filters_1, filters_2_reduce, filters_2, filters_3_re
 
 
 #-----------------------------------------------------------------------------------------------------------------------
-#定义CBAM的channel attention模块和spatial attention模块
+# define the channel attention and spatial attention modules for CBAM
 def cbam_block(input_feature, name, ratio=8):
     with tf.variable_scope(name):
         attention_feature = channel_attention(input_feature, "ch_at", ratio)
@@ -152,7 +152,7 @@ def channel_attention(input_feature, name, ratio=8):
         assert avg_pool.get_shape()[1:] == (1, 1, channel)
 
         max_pool = tf.reduce_max(input_feature, axis=[1,2], keepdims=True)
-        assert max_pool.get_shape()[1:]== (1,1,channel)
+        assert max_pool.get_shape()[1:] == (1,1,channel)
         max_pool = tf.layers.dense(inputs=max_pool,
                                    units=channel//ratio,
                                    activation=tf.nn.relu,
@@ -193,7 +193,7 @@ def spatial_attention(input_feature, name):
         return input_feature * concat\
 
 #-----------------------------------------------------------------------------------------------------------------------
-#定义ResNet的inception模块
+# define the inception module for ResNet 
 def building_block(inputs, filter_size, filters, strides, name):
     with tf.variable_scope(name):
         x = cbam_block(inputs,name="resNet_cbam")
@@ -243,7 +243,7 @@ def count_numbers(self, data_path):
 
 
 #-----------------------------------------------------------------------------------------------------------------------
-#构建网络
+# Construct Models
 class SelectModel(object):
     def __init__(self, num_classes, learning_rate_base, save_rate, epoch_num, batch_size, model_path):
         self.num_classes = num_classes
@@ -421,14 +421,14 @@ class SelectModel(object):
             return linear
 
     def train(self):
-        # 从train.tfrecords中读取数据
+        # read data from the file of train.tfrecords
         filename = r"D:\CNN\training_data.tfrecords"
         id, ld = read_example(filename, batch_size)
         id = tf.image.rot90(id, k=2)
         IMAGE_HEIGHT = 288
         IMAGE_WIDTH = 384
         IMAGE_DEPTH = 1
-        # 占位符
+        # set the placeholder of input image and label
         image = tf.placeholder(dtype=tf.float32, shape=[None, IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_DEPTH],
                                name="image_placeholder")
         label = tf.placeholder(dtype=tf.float32, shape=[None, num_classes], name="label_placeholder")
@@ -446,17 +446,15 @@ class SelectModel(object):
             loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=output,
                                                                              labels=label,
                                                                              name="cross_entropy"), name="loss")
-        # 训练时需要添加一下几行，这样才能计算平均值和标准差的滑动平均，
-        # 输入参数training=True.测试时，输入参数training=False,他就没了。
         update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
         with tf.control_dependencies(update_ops):
             train_step = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=0.9, beta2=0.999,
                                                 epsilon=1e-8).minimize(loss, global_step=global_step)
-        # 初始化
+        # initial the parameters
         init = tf.global_variables_initializer()
         sess = tf.InteractiveSession()
         sess.run(init)
-        # 启动保存模型操作
+        # Start the operation of saving the fine model
         saver = tf.train.Saver()
         train_loss_list = []
         f1 = open(r"D:\CNN\vgg16_loss", "w")
@@ -506,13 +504,3 @@ if __name__ == "__main__":
                                batch_size=64,
                                model_path="./VGG16")
     model_output.train()
-
-
-
-"""
-def merge_layer(input_1, input_2, kernel_size, filters, block_size, name, training, batch_normalize):
-    input_2 = conv_layer(input_2, kernel_size, filters, name, training, batch_normalize)
-    input_2 = tf.space_to_depth(input_2, block_size)
-    output = tf.concat([input_1, input_2], axis=3)
-    return output
-"""
