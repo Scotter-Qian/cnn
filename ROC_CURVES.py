@@ -17,12 +17,12 @@ def read_example(filename, batch_size):
     parsed_example = tf.parse_example(batch, features={'image': tf.FixedLenFeature([], tf.string),
                                                        'label': tf.FixedLenFeature([], tf.int64)})
     image_raw = tf.decode_raw(parsed_example['image'], tf.uint8)
-    #IMAGE_HEIGHT为288，IMAGE_WIDTH为384, IMAGE_DEPTH为1
+    #IMAGE_HEIGHT， IMAGE_WIDTH and IMAGE_DEPTH set as 288，384 and 1
     image = tf.cast(tf.reshape(image_raw, [batch_size, 288, 384, 1]), tf.float32)
     image = image/255.0
     label_raw = tf.cast(parsed_example['label'], tf.int32)
     label = tf.reshape(label_raw, [batch_size*1])
-    #depth=num_classes,这里是二分类，所以num_classes=2
+    #depth equals to num_classes
     label = tf.one_hot(label, depth=2)
     return image, label
 
@@ -47,7 +47,7 @@ def draw_roc_curve(FPR, TPR):
     plt.xlabel("False Positive Rate", fontsize=16)
     plt.ylabel("True Positive Rate", fontsize=16)
     #plt.grid(True)
-    plt.legend()  # 显示label
+    plt.legend()  # display label
     plt.show()
 
 def count_numbers(data_path):
@@ -60,16 +60,16 @@ def count_numbers(data_path):
 
 
 def test():
-    #文件读取
+    # read data from TF.Record
     BATCH_SIZE = 64
     filename = r"D:\CNN\test.tfrecords"
     ima, lab = read_example(filename, BATCH_SIZE)
-    #加载模型
+    # restore model
     sess = tf.Session()
     saver = tf.train.import_meta_graph(r"D:\CNN\GoogLeNet\fine_parameters-27.meta")
     saver.restore(sess, r"D:\CNN\GoogLeNet\fine_parameters-27")
     graph = tf.get_default_graph()
-    #retrieve tensors, operations, ect
+    # retrieve tensors, operations, ect
     image = graph.get_tensor_by_name("image_placeholder:0")
     label = graph.get_tensor_by_name("label_placeholder:0")
     output = graph.get_tensor_by_name("net/GoogLeNet/fc_1/add:0")
@@ -77,14 +77,14 @@ def test():
     #net/ResNet/fc_1/add:0
     #net/GoogLeNet/fc_1/add:0
     #net/VGG16/fc_3/add:0
-    #计算测试样本数
+    # calculate the testing number
     test_path = r"D:\CNN\data\test"
     num_test = count_numbers(test_path)
 
-    #计算迭代次数，向上取整
+    # calculate the iter number. Rounded up
     num_step = int(math.ceil(num_test/BATCH_SIZE))
     print("num_step: ", num_step)
-    #重新计算实际测试样本数
+    # Recalculate the actual number of test samples
     num_example = num_step * BATCH_SIZE
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
