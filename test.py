@@ -24,7 +24,7 @@ def test():
     num_example = num_step * BATCH_SIZE
     print("num_test:", num_test, "num_examples:", num_example)
 
-    # 加载模型
+    # restore the model
     sess = tf.Session()
     saver = tf.train.import_meta_graph("E:\\CNN\\AM-VGG16\\fine_parameters-30.meta")
     #ckpt = tf.train.latest_checkpoint("E:\\CNN\\AM-VGG16")
