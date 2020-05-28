@@ -16,3 +16,5 @@ GPU: 1080Ti
 
 command：
 python *.py
+
+If you have any questions, you can comunicate with me, email:cq.optim@gmail.com
