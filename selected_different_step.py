@@ -11,27 +11,27 @@ def count_numbers(filename):
     return num
 
 def test():
-    # 制作tf.record文件，并读取
+    # read data from tf.record
     BATCH_SIZE = 64
     # path = r"D:\vgg\data\valid"
     # encode_to_tfrecords(path)
     filename = r"E:\CNN\combined_testing_data.tfrecords"
     ima, lab = read_example(filename, BATCH_SIZE)
     """
-    #计算测试样本数
+    # Calculate the number of test samples
     test_path = r"D:\vgg\new_data\valid"
     file_path_set = search_file(test_path)
     num_test = len(file_path_set)
-    #计算迭代次数，向上取整
+    # Calculate the number of iterations, round up
     """
 
     num_test = count_numbers(filename)
     num_step = int(math.ceil(num_test / BATCH_SIZE))
-    # 重新计算实际测试样本数
+    # Recalculate the actual number of test samples
     num_example = num_step * BATCH_SIZE
     print("num_step: ", num_step, "num_example:", num_example)
 
-    #加载模型
+    # restore model
     saver = tf.train.import_meta_graph(r"E:\CNN\AM-ResNet34\fine_parameters-28.meta")
     graph = tf.get_default_graph()
     # retrieve tensors, operations, ect
@@ -125,7 +125,7 @@ def test():
     plt.xlabel("False Positive Rate", fontsize=16)
     plt.ylabel("True Positive Rate", fontsize=16)
     #plt.grid(True)
-    plt.legend()  # 显示label
+    plt.legend()  # display label
     plt.show()
 
     #https://scikit-learn.org/dev/modules/generated/sklearn.metrics.precision_recall_fscore_support.html
