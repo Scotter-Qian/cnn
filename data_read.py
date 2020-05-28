@@ -1,12 +1,12 @@
-# make tf.record 文件
-# 运行时只需要修改下路径
+# make tf.record file
+# changing the path when running
 import os
 import pickle
 import tensorflow as tf
 import numpy as np
 import math
 
-#定义函数搜索要训练的数据路径
+# Define the function to search the data path to be trained
 def search_file(path):
     file = list()
     for name in os.listdir(path):
@@ -16,9 +16,9 @@ def search_file(path):
                 file.append(name_path)
     return np.array(file)
 
-
 def encode_to_tfrecords(path):
-    #创建对象，用于记录文件写入记录；train时将"valid.tfrecord"改为"train.tfrecord"
+    # Create an object for recording files to write records; 
+    # change "valid.tfrecord" to "train.tfrecord" when training
     writer = tf.python_io.TFRecordWriter("train.tfrecords")
     data_path_file = search_file(path)
     for file_path in data_path_file:
@@ -28,27 +28,26 @@ def encode_to_tfrecords(path):
         image = np.reshape(image, (288, 384, 1))
         label = (data["y"])
         label = np.reshape(label, 1)
-        #将图片转换成原生bytes
+        # transfer image data to bytes
         image_raw = image.tobytes()
         #label_raw = label.tobytes()
-        #将数据整理成TFRecord需要的数据结构
+        # Organize the data into the data structure required by TFRecord
         example = tf.train.Example(features=tf.train.Features(feature={
             "image": tf.train.Feature(bytes_list=tf.train.BytesList(value=[image_raw])),
             "label": tf.train.Feature(int64_list=tf.train.Int64List(value=[label]))}))
-        #序列化写入文件
+        # Serialize write file
         writer.write(example.SerializeToString())
     writer.close()
     print("tfrecord_file is done!")
 
-#读取TFRecord格式文件，返回读取到的batch_size张图片以及对应的标签
-#filename:TFRecord格式文件路径
+# Read data from TFRecord, get the batch_size pictures and the corresponding label
 def read_example(filename, batch_size):
-    #创建文件读取器，从队列文件中读取数据
+    # Create a file reader to read data from the queue file
     reader = tf.TFRecordReader()
-    #创建文件名队列
+    # Create a file name queue
     filename_queue = tf.train.string_input_producer([filename], num_epochs=None)
     _, serialized_example = reader.read(filename_queue)
-    #每次读取batch_size张图片,如果使用tf.train.shuffle_batch,则不一样
+    # Read batch_size pictures each time
     min_after_dequeue = 10
     batch = tf.train.shuffle_batch([serialized_example],
                             batch_size=batch_size,
@@ -58,12 +57,12 @@ def read_example(filename, batch_size):
     parsed_example = tf.parse_example(batch, features={'image': tf.FixedLenFeature([], tf.string),
                                                        'label': tf.FixedLenFeature([], tf.int64)})
     image_raw = tf.decode_raw(parsed_example['image'], tf.uint8)
-    #IMAGE_HEIGHT为288，IMAGE_WIDTH为384, IMAGE_DEPTH为1
+    #IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_DEPTH equals to 288, 384 and 1
     image = tf.cast(tf.reshape(image_raw, [batch_size, 288, 384, 1]), tf.float32)
     image = image/255.0
     label_raw = tf.cast(parsed_example['label'], tf.int32)
     label = tf.reshape(label_raw, [batch_size*1])
-    #depth=num_classes,这里是二分类，所以num_classes=2
+    #depth equals to num_classes
     label = tf.one_hot(label, depth=2)
     return image, label
 
@@ -90,9 +89,9 @@ if __name__ == "__main__":
     init = tf.global_variables_initializer()
     sess = tf.InteractiveSession()
     sess.run(init)
-    #创建一个协调器，管理线程
+    # Create a coordinator to manage threads
     coord = tf.train.Coordinator()
-    #启动填充队列的线程，此时文件名才开始进队
+    # Start the thread that fills the queue, and the file name starts to enter the queue at this time
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
     for j in range(epoch):
         for i in range(batch_nums):
